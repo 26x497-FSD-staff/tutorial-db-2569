@@ -2,9 +2,8 @@ import express, { Router, type Request, type Response, type NextFunction } from 
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { dbClient } from "@db/client.ts";
-import { fileTable } from "@db/schema.ts";
-import { encryptedText } from "@db/encryptionUtil.ts";
+import { dbClient } from "@db/client.js";
+import { fileTable } from "@db/schema.js";
 
 const router = Router();
 
