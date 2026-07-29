@@ -84,3 +84,14 @@ export const userTable = pgTable("users", {
     () => new Date()
   ),
 });
+
+// Define the FILE table
+export const fileTable = pgTable("file", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  filename: encryptedText("filename").notNull(),   // encrypted filename
+  itemId: uuid('item_id').notNull(),               // ref to todo or task item
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date", precision: 3 }).$onUpdate(
+    () => new Date()
+  ),
+});
