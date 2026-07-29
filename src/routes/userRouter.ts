@@ -9,8 +9,8 @@ const router = Router();
 // GET /user - Get users by email or role
 router.get("/", async (req, res, next) => {
   try {
-    const email = req.body.email;
-    const role = req.body.role;
+    const email = req.body ? null : req.body.email;
+    const role = req.body ? null : req.body.role;
 
     if (!email && !role) {
       const results = await dbClient.query.userTable.findMany();
