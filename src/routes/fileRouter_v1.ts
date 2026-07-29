@@ -26,35 +26,136 @@ const storage = multer.diskStorage({
 
 // 2. Filter files to allow only images
 const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  if (file.mimetype.startsWith('image/')) {
+  if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('application/pdf')) {
     cb(null, true);
   } else {
-    cb(new Error('Only image files are allowed!'));
+    cb(new Error('Only image and pdf files are allowed!'));
   }
 };
 
 const upload = multer({ storage, fileFilter });
 
-// 3. Serve the "uploads" folder statically so users can view images
-// GET /file/view
+// Serve the "uploads" folder statically so users can view images
+// GET /file/view/:filename - Endpoint to access specific file
 router.use('/view', express.static(uploadDir));
 
-// 4. API Endpoint to handle image upload
-// POST /file/upload
-router.post('/upload', upload.single('image'), (req: Request, res: Response): any => {
+
+// POST /file/upload - Endpoint to handle image upload
+router.post('/upload', upload.single('file'), (req: Request, res: Response): any => {
   if (!req.file) {
     return res.status(400).json({ error: 'Please select an image file to upload.' });
   }
 
+  const filename = req.file.filename;
+
   // Construct a public view URL for the client
-  const imageUrl = `${req.protocol}://${req.get('host')}/file/view/${req.file.filename}`;
+  const imageUrl = `${req.protocol}://${req.get('host')}/file/view/${filename}`;
 
   res.status(201).json({
     message: 'Image uploaded successfully!',
-    filename: req.file.filename,
+    filename: filename,
     size: req.file.size,
     url: imageUrl
   });
+});
+
+// GET /file - Endpoint to list all files 
+router.get('/', (req: Request, res: Response): void => {
+    fs.readdir(uploadDir, (err, files) => {
+        if (err) {
+            res.status(500).json({ error: 'Unable to scan directory structure' });
+            return;
+        }
+
+        // Map files to include complete metadata and functional access URLs
+        const fileList = files.map(file => {
+            const filePath = path.join(uploadDir, file);
+            let stats;
+            
+            try {
+                stats = fs.statSync(filePath);
+            } catch (statErr) {
+                return null; // Skip file if metadata reading fails
+            }
+
+            return {
+                filename: file,
+                url: `${req.protocol}://${req.get('host')}/file/view/${file}`,
+                size: stats.size,
+                createdAt: stats.birthtime
+            };
+        }).filter(Boolean); // Filter out any null entries
+
+        res.status(200).json({
+            totalFiles: fileList.length,
+            files: fileList
+        });
+    });
+});
+
+// POST /file/delete - Endpoint to delete a specific file by name
+router.post('/delete', (req: Request, res: Response): void => {
+    const { filename } = req.body;
+
+    if (!filename) {
+        res.status(400).json({ error: 'Filename parameter is required in the body' });
+        return;
+    }
+
+    // Security check: Prevent directory traversal attacks (e.g., "../../etc/passwd")
+    const safeFilename = path.basename(filename);
+    const filePath = path.join(uploadDir, safeFilename);
+
+    // Verify file path belongs to the directory and exists
+    if (!fs.existsSync(filePath)) {
+        res.status(404).json({ error: 'File not found' });
+        return;
+    }
+
+    fs.unlink(filePath, (err) => {
+        if (err) {
+            res.status(500).json({ error: 'Failed to delete file' });
+            return;
+        }
+        res.status(200).json({ message: `File ${safeFilename} deleted successfully` });
+    });
+});
+
+// 2. POST Endpoint to delete ALL files in the directory
+router.post('/reset', (req: Request, res: Response): void => {
+    fs.readdir(uploadDir, (err, files) => {
+        if (err) {
+            res.status(500).json({ error: 'Failed to read directory' });
+            return;
+        }
+
+        if (files.length === 0) {
+            res.status(200).json({ message: 'Directory is already empty' });
+            return;
+        }
+
+        // Map files to absolute paths
+        const deletionPromises = files.map((file) => {
+            return new Promise<void>((resolve, reject) => {
+                fs.unlink(path.join(uploadDir, file), (unlinkErr) => {
+                    if (unlinkErr) reject(unlinkErr);
+                    else resolve();
+                });
+            });
+        });
+
+        // Execute all deletions concurrently
+        Promise.all(deletionPromises)
+            .then(() => {
+                res.status(200).json({ 
+                    message: 'All files deleted successfully', 
+                    count: files.length 
+                });
+            })
+            .catch((error) => {
+                res.status(500).json({ error: 'Failed to delete some files cleanly' });
+            });
+    });
 });
 
 // Global Error Handler for handling Multer/Upload issues
