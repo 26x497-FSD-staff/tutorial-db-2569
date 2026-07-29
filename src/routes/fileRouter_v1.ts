@@ -42,7 +42,7 @@ const upload = multer({ storage, fileFilter });
 router.use('/view', express.static(uploadDir));
 
 
-// POST /file/upload - Endpoint to handle image upload
+// POST /file/upload - Endpoint to handle file upload
 router.post('/upload', upload.single('file'), async (req: Request, res: Response): any => {
   if (!req.file) {
     return res.status(400).json({ error: 'Please select an image file to upload.' });
