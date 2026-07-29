@@ -161,7 +161,7 @@ router.get('/view/:filename', async (req: Request, res: Response, next: NextFunc
 });
 
 
-// DELETE /v2/file/:filename - Endpoint to delete an object
+// DELETE /v2/file/:filename - Endpoint to delete an object without folder
 router.delete('/:filename', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const filename = req.params.filename as string;
@@ -171,11 +171,11 @@ router.delete('/:filename', async (req: Request, res: Response, next: NextFuncti
       await minioClient.statObject(BUCKET_NAME, filename);
 
     } catch (statError: any) {
-      if (statError.code === 'NoSuchKey') {
-        res.status(404).json({ error: 'Image not found in storage.' });
+        res.status(404).json({ 
+          msg: 'Image not found in storage.',
+          error: statError
+        });
         return;
-      }
-      throw statError; // Pass any other internal MinIO errors down
     }
 
     // 2. Delete the object from the MinIO bucket
@@ -185,6 +185,55 @@ router.delete('/:filename', async (req: Request, res: Response, next: NextFuncti
     res.status(200).json({
       message: 'Image deleted successfully',
       filename: filename
+    });
+
+  } catch (error) {
+    next(error); // Forwards to your global error handler
+  }
+});
+
+// DELETE /v2/file/folder/*filePath - Endpoint to delete an object inside folder
+router.delete('/folder/*filePath', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+
+    // Example URL: /v2/file/folder/xxxxx/image.png
+    // Result: req.params.filePath = ['xxxxx', 'image.png']
+    const filePath = req.params.filePath;
+    console.log(filePath);
+
+    if (!filePath || filePath.length === 0) {
+      res.status(400).json({ error: 'No file path provided.' });
+      return;
+    }
+
+    // Re-combine segments with forward slashes for MinIO
+    const fullStoragePath = Array.isArray(filePath) 
+      ? filePath.join('/') 
+      : filePath; // Fallback if parsed as a string in certain setups
+
+    console.log(fullStoragePath);
+
+    // Check if the object exists before attempting deletion
+    try {
+      await minioClient.statObject(BUCKET_NAME, fullStoragePath);
+
+    } catch (statError: any) {
+      
+      res.status(404).json({ 
+        msg: 'File not found in storage.',
+        error: statError 
+      });
+      return;
+      throw statError; // Pass any other internal MinIO errors down
+    }
+
+    // Delete the object from the MinIO bucket
+    await minioClient.removeObject(BUCKET_NAME, fullStoragePath);
+
+    // Return successful response
+    res.status(200).json({
+      message: 'Image deleted successfully',
+      filename: fullStoragePath
     });
 
   } catch (error) {
