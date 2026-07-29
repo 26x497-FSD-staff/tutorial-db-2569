@@ -7,7 +7,7 @@ import { sql } from "drizzle-orm";
 const router = Router();
 
 // GET /user - Get users by email or role
-router.get("/user", async (req, res, next) => {
+router.get("/", async (req, res, next) => {
   try {
     const email = req.body.email;
     const role = req.body.role;
@@ -35,7 +35,7 @@ router.get("/user", async (req, res, next) => {
 });
 
 // PUT /user - Create a new user
-router.put("/user", async (req, res, next) => {
+router.put("/", async (req, res, next) => {
   try {
     
     const email = req.body.email
@@ -62,7 +62,7 @@ router.put("/user", async (req, res, next) => {
 });
 
 // POST /user/reset - Delete all users
-router.post("/user/all", async (req, res, next) => {
+router.post("/reset", async (req, res, next) => {
   try {
     await dbClient.delete(userTable);
     res.json({
