@@ -12,6 +12,7 @@ import { jsonErrorHandler } from "./middlewares/jsonErrorHandler.ts";
 import todoRouter from "./routes/todoRouter.ts";
 import userRouter from "./routes/userRouter.ts";
 import fileRouter_v1 from "./routes/fileRouter_v1.ts";
+import fileRouter_v2 from "./routes/fileRouter_v2.ts";
 
 import { todo } from "node:test";
 const debug = Debug("pf-backend");
@@ -35,6 +36,7 @@ app.use(express.json());
 app.use('/todo',todoRouter);
 app.use('/user',userRouter);
 app.use('/file',fileRouter_v1);
+app.use('/v2/file',fileRouter_v2);
 
 // use jsonErrorHandler middleware
 app.use(jsonErrorHandler);
