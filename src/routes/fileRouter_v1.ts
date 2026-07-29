@@ -135,7 +135,7 @@ router.post('/delete', (req: Request, res: Response): void => {
     });
 });
 
-// 2. POST Endpoint to delete ALL files in the directory
+// POST Endpoint to delete ALL files in the directory
 router.post('/reset', (req: Request, res: Response): void => {
     fs.readdir(uploadDir, (err, files) => {
         if (err) {
