@@ -2,6 +2,9 @@ import express, { Router, type Request, type Response, type NextFunction } from 
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { dbClient } from "@db/client.ts";
+import { fileTable } from "@db/schema.ts";
+import { encryptedText } from "@db/encryptionUtil.ts";
 
 const router = Router();
 
@@ -41,18 +44,30 @@ router.use('/view', express.static(uploadDir));
 
 
 // POST /file/upload - Endpoint to handle image upload
-router.post('/upload', upload.single('file'), (req: Request, res: Response): any => {
+router.post('/upload', upload.single('file'), async (req: Request, res: Response): any => {
   if (!req.file) {
     return res.status(400).json({ error: 'Please select an image file to upload.' });
   }
 
+  const itemId = req.body.itemId;
   const filename = req.file.filename;
+
+  // add filename to file table
+  const result = await dbClient
+    .insert(fileTable)
+    .values({
+      filename,
+      itemId 
+    })
+    .returning({ id: fileTable.id, itemId: fileTable.itemId})
 
   // Construct a public view URL for the client
   const imageUrl = `${req.protocol}://${req.get('host')}/file/view/${filename}`;
 
   res.status(201).json({
     message: 'Image uploaded successfully!',
+    id: result[0].id,
+    itemId: result[0].itemId,
     filename: filename,
     size: req.file.size,
     url: imageUrl
