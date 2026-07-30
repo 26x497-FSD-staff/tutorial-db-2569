@@ -37,7 +37,7 @@ const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilt
 
 const upload = multer({ storage, fileFilter });
 
-// Serve the "uploads" folder statically so users can view images
+// Serve the "uploads" folder statically so users can view file
 // GET /file/view/:filename - Endpoint to access specific file
 router.use('/view', express.static(uploadDir));
 
@@ -61,7 +61,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     .returning({ id: fileTable.id, itemId: fileTable.itemId})
 
   // Construct a public view URL for the client
-  const imageUrl = `${req.protocol}://${req.get('host')}/file/view/${filename}`;
+  const fileUrl = `${req.protocol}://${req.get('host')}/file/view/${filename}`;
 
   res.status(201).json({
     message: 'Image uploaded successfully!',
@@ -69,107 +69,107 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     itemId: result[0].itemId,
     filename: filename,
     size: req.file.size,
-    url: imageUrl
+    url: fileUrl
   });
 });
 
 // GET /file - Endpoint to list all files 
 router.get('/', (req: Request, res: Response): void => {
-    fs.readdir(uploadDir, (err, files) => {
-        if (err) {
-            res.status(500).json({ error: 'Unable to scan directory structure' });
-            return;
-        }
+  fs.readdir(uploadDir, (err, files) => {
+    if (err) {
+      res.status(500).json({ error: 'Unable to scan directory structure' });
+      return;
+    }
 
-        // Map files to include complete metadata and functional access URLs
-        const fileList = files.map(file => {
-            const filePath = path.join(uploadDir, file);
-            let stats;
-            
-            try {
-                stats = fs.statSync(filePath);
-            } catch (statErr) {
-                return null; // Skip file if metadata reading fails
-            }
+    // Map files to include complete metadata and functional access URLs
+    const fileList = files.map(file => {
+      const filePath = path.join(uploadDir, file);
+      let stats;
+      
+      try {
+          stats = fs.statSync(filePath);
+      } catch (statErr) {
+          return null; // Skip file if metadata reading fails
+      }
 
-            return {
-                filename: file,
-                url: `${req.protocol}://${req.get('host')}/file/view/${file}`,
-                size: stats.size,
-                createdAt: stats.birthtime
-            };
-        }).filter(Boolean); // Filter out any null entries
+      return {
+          filename: file,
+          url: `${req.protocol}://${req.get('host')}/file/view/${file}`,
+          size: stats.size,
+          createdAt: stats.birthtime
+      };
+    }).filter(Boolean); // Filter out any null entries
 
-        res.status(200).json({
-            totalFiles: fileList.length,
-            files: fileList
-        });
+    res.status(200).json({
+      totalFiles: fileList.length,
+      files: fileList
     });
+  });
 });
 
-// POST /file/delete - Endpoint to delete a specific file by name
-router.post('/delete', (req: Request, res: Response): void => {
-    const { filename } = req.body;
+// DELETE /file/:filename - Endpoint to delete a specific file by name
+router.delete('/', (req: Request, res: Response): void => {
+  const filename = req.params.filename as string;
 
-    if (!filename) {
-        res.status(400).json({ error: 'Filename parameter is required in the body' });
-        return;
+  if (!filename) {
+    res.status(400).json({ error: 'Filename parameter is required in the body' });
+    return;
+  }
+
+  // Security check: Prevent directory traversal attacks (e.g., "../../etc/passwd")
+  const safeFilename = path.basename(filename);
+  const filePath = path.join(uploadDir, safeFilename);
+
+  // Verify file path belongs to the directory and exists
+  if (!fs.existsSync(filePath)) {
+    res.status(404).json({ error: 'File not found' });
+    return;
+  }
+
+  fs.unlink(filePath, (err) => {
+    if (err) {
+      res.status(500).json({ error: 'Failed to delete file' });
+      return;
     }
-
-    // Security check: Prevent directory traversal attacks (e.g., "../../etc/passwd")
-    const safeFilename = path.basename(filename);
-    const filePath = path.join(uploadDir, safeFilename);
-
-    // Verify file path belongs to the directory and exists
-    if (!fs.existsSync(filePath)) {
-        res.status(404).json({ error: 'File not found' });
-        return;
-    }
-
-    fs.unlink(filePath, (err) => {
-        if (err) {
-            res.status(500).json({ error: 'Failed to delete file' });
-            return;
-        }
-        res.status(200).json({ message: `File ${safeFilename} deleted successfully` });
-    });
+    res.status(200).json({ message: `File ${safeFilename} deleted successfully` });
+  });
 });
 
 // POST Endpoint to delete ALL files in the directory
 router.post('/reset', (req: Request, res: Response): void => {
-    fs.readdir(uploadDir, (err, files) => {
-        if (err) {
-            res.status(500).json({ error: 'Failed to read directory' });
-            return;
-        }
+  fs.readdir(uploadDir, (err, files) => {
+    if (err) {
+      res.status(500).json({ error: 'Failed to read directory' });
+      return;
+    }
 
-        if (files.length === 0) {
-            res.status(200).json({ message: 'Directory is already empty' });
-            return;
-        }
+    if (files.length === 0) {
+      res.status(200).json({ message: 'Directory is already empty' });
+      return;
+    }
 
-        // Map files to absolute paths
-        const deletionPromises = files.map((file) => {
-            return new Promise<void>((resolve, reject) => {
-                fs.unlink(path.join(uploadDir, file), (unlinkErr) => {
-                    if (unlinkErr) reject(unlinkErr);
-                    else resolve();
-                });
-            });
+    // Map files to absolute paths
+    const deletionPromises = files.map((file) => {
+      return new Promise<void>((resolve, reject) => {
+        fs.unlink(path.join(uploadDir, file), (unlinkErr) => {
+          if (unlinkErr) reject(unlinkErr);
+          else resolve();
         });
-
-        // Execute all deletions concurrently
-        Promise.all(deletionPromises)
-            .then(() => {
-                res.status(200).json({ 
-                    message: 'All files deleted successfully', 
-                    count: files.length 
-                });
-            })
-            .catch((error) => {
-                res.status(500).json({ error: 'Failed to delete some files cleanly' });
-            });
+      });
     });
+
+    // Execute all deletions concurrently
+    Promise.all(deletionPromises)
+      .then(() => {
+        res.status(200).json({ 
+            message: 'All files deleted successfully', 
+            count: files.length 
+        });
+      })
+      .catch((error) => {
+        res.status(500).json({ error: 'Failed to delete some files cleanly' });
+      });
+  });
 });
 
 // Global Error Handler for handling Multer/Upload issues
