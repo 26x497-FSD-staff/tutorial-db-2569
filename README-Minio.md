@@ -819,7 +819,6 @@ try {
     // Optional: filter by virtual folder path (e.g., /list?prefix=avatars/)
     const prefix = (req.query.prefix as string) || ''; // folder in a bucket
     const suffix = (req.query.suffix as string) || ''; // e.g., "png" or "pdf"
-    console.log(prefix, suffix)
 
     // Create an object stream from MinIO
     // Set recursive to true to list items inside subdirectories
@@ -831,6 +830,8 @@ try {
     stream.on('data', (obj) => {
       // filter by suffix (.png, .pdf)
       if (obj.name && obj.name.toLowerCase().endsWith(`.${suffix.toLowerCase()}`)) {
+        objects.push(obj);
+      } else if (!suffix) {
         objects.push(obj);
       }
     });
