@@ -5,6 +5,17 @@ We will continue from the [pf-backend](https://github.com/fullstack-69/pf-backen
 
 ---
 
+## Contents
+
+- One-to-Many relationship with Drizzle
+- Data Integrity with Foreign Key
+- Using PostgreSQL to store NoSQL document
+- Database Column Encryption
+  - Text column encryption
+  - Jsonb column encryption
+
+---
+
 ## Project Setup
 
 Clone the [pf-backend](https://github.com/fullstack-69/pf-backend.git) project.
@@ -106,22 +117,7 @@ pnpm run db:prototype
 
 ### Add new API endpoints
 
-We will modify `GET /todo` to return all `todo` items along with their `tasks` by using the following code.
-
-```typescript
-// GET /todo - Query todo
-try {
-  // const results = await dbClient.query.todoTable.findMany();
-
-  const results = await dbClient.query.todoTable.findMany({
-    with: { tasks: true}
-  });
-
-  ...
-}
-```
-
-Next, we will add `PUT /todo/task` endpoint for inserting a new task under specified todo item.
+We will add `PUT /todo/task` endpoint for inserting a new task under specified todo item.
 
 ```typescript
 // PUT /todo/task - Insert a task to a specified todo item
@@ -146,6 +142,21 @@ app.put("/todo/task", async (req, res, next) => {
 ```
 
 This endpoint read the value of `taskText` and `todoId` from JSON body.
+
+We need to modify `GET /todo` to make it returns all `todo` items along with their `tasks` by using the following code.
+
+```typescript
+// GET /todo - Query todo
+try {
+  // const results = await dbClient.query.todoTable.findMany();
+
+  const results = await dbClient.query.todoTable.findMany({
+    with: { tasks: true}
+  });
+
+  ...
+}
+```
 
 The `DELETE /todo` endpoint **stays the same** since deleting a todo item will automatically delete its tasks. Now, we can use Insomnia client to test the new endpoints.
 
@@ -490,7 +501,7 @@ Now we can test the `GET /user` endpoint with 3 different ways:
 
 ---
 
-## Database Encryption
+## Database Column Encryption
 
 In Drizzle ORM, you can achieve **application-level column encryption** by defining a `customType`.
 
