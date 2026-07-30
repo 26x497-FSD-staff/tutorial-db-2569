@@ -43,7 +43,7 @@ router.use('/view', express.static(uploadDir));
 
 
 // POST /file/upload - Endpoint to handle file upload
-router.post('/upload', upload.single('file'), async (req: Request, res: Response): any => {
+router.post('/upload', upload.single('file'), async (req: Request, res: Response) => {
   if (!req.file) {
     return res.status(400).json({ error: 'Please select an image file to upload.' });
   }
