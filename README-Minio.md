@@ -1,6 +1,6 @@
-# Object Storage Tutorial
+# File Storage Tutorial
 
-This is a `Object Storage Tutorial` guideline for the `Backend Architecture` module.
+This is a `File Storage Tutorial` for the `Backend Architecture` module.
 We will continue from the []() project.
 
 ---
