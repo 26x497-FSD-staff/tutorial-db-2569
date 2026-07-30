@@ -5,6 +5,15 @@ We will continue from the []() project.
 
 ---
 
+## Content
+
+- Project reviewing 
+- Project restructuring
+- Using file system as file storage
+- Using Object storage as file storage
+
+---
+
 ## Project Setup
 
 Clone the []() project.
@@ -18,14 +27,87 @@ This tutorial also requires a `PostgreSQL` database. We can use the [pf-db](http
 
 ---
 
-## Project Review
+## Project Reviewing
 
-- `/todo` endpoints handle CRUD operations on `todo` items and their `task`.
-- `/user` endpoints handle CRUD operations on `user` data.
-- Reorganizes project structure:
-  - `./src/routes` stores logic for different endpoints (in different files).
-  - `./src/middlewares` stores logic for different middlewares.
+- Folders:
+  - `./src` contains `index.ts` which defines all API endpoints.
   - `./db` stores database schemas, encryption logic, and other database utilities.
+- API Endpoints:
+  - `/todo` endpoints handle CRUD operations on `todo` items and their `task`.
+  - `/user` endpoints handle CRUD operations on `user` data.
+
+---
+
+## Project Restructuring
+
+We will create the following folders and restructure API endpoint codes
+
+- `./src/routes` stores logic for all endpoints.
+  - `todoRouter.ts` contains codes of all `/todo/...` 
+  - `userRouter.ts` contains codes for all `/user/...`
+- `./src/middlewares` stores logic for all middlewares.
+  - `jsonErrorHandler.ts` contains codes of the `jsonError` middleware
+
+After restructuring the code, `./src/index.ts` is left with the following code.
+
+```typescript
+import "dotenv/config";
+
+// import middlewares
+import cors from "cors";
+import Debug from "debug";
+import express from "express";
+import helmet from "helmet";
+import morgan from "morgan";
+import { jsonErrorHandler } from "./middlewares/jsonErrorHandler.ts";
+
+// import routers
+import todoRouter from "./routes/todoRouter.ts";
+import userRouter from "./routes/userRouter.ts";
+
+import { todo } from "node:test";
+const debug = Debug("pf-backend");
+
+//Intializing the express app
+const app = express();
+
+//Middleware
+app.use(morgan("dev", { immediate: false }));
+app.use(helmet());
+app.use(
+  cors({
+    origin: false, // Disable CORS
+    // origin: "*", // Allow all origins
+  }),
+);
+// Extracts the entire body portion of an incoming request stream and exposes it on req.body.
+app.use(express.json());
+
+// use routers
+app.use('/todo',todoRouter);
+app.use('/user',userRouter);
+app.use('/file',fileRouter_v1);
+app.use('/v2/file',fileRouter_v2);
+
+// use jsonErrorHandler middleware
+app.use(jsonErrorHandler);
+
+// Running app
+const PORT = process.env.PORT || 3000;
+// * Running app
+app.listen(PORT, async () => {
+  debug(`Listening on port ${PORT}: http://localhost:${PORT}`);
+});
+```
+---
+
+## Using File System as file storage
+
+---
+
+## Using Object Storage as file storage
+
+---
 
 ## Minio Client (MC)
 
