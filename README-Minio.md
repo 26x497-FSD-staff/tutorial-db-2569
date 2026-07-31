@@ -7,7 +7,7 @@ We will continue from the []() project.
 
 ## Content
 
-- Project reviewing 
+- Project reviewing
 - Project restructuring
 - Using file system as file storage
 - Using Object storage as file storage
@@ -43,7 +43,7 @@ This tutorial also requires a `PostgreSQL` database. We can use the [pf-db](http
 We will create the following folders and restructure API endpoint codes
 
 - `./src/routes` stores logic for all endpoints.
-  - [`todoRouter.ts`](https://github.com/26x497-FSD-staff/tutorial-db-2569/blob/minio/src/routes/todoRouter.ts) contains codes of all `/todo/...` 
+  - [`todoRouter.ts`](https://github.com/26x497-FSD-staff/tutorial-db-2569/blob/minio/src/routes/todoRouter.ts) contains codes of all `/todo/...`
   - [`userRouter.ts`](https://github.com/26x497-FSD-staff/tutorial-db-2569/blob/minio/src/routes/userRouter.ts) contains codes for all `/user/...`
 - `./src/middlewares` stores logic for all middlewares.
   - [`jsonErrorHandler.ts`](https://github.com/26x497-FSD-staff/tutorial-db-2569/blob/minio/src/middlewares/jsonErrorHandler.ts) contains codes of the `jsonError` middleware
@@ -84,8 +84,8 @@ app.use(
 app.use(express.json());
 
 // use routers
-app.use('/todo',todoRouter);
-app.use('/user',userRouter);
+app.use("/todo", todoRouter);
+app.use("/user", userRouter);
 
 // use jsonErrorHandler middleware
 app.use(jsonErrorHandler);
@@ -97,11 +97,14 @@ app.listen(PORT, async () => {
   debug(`Listening on port ${PORT}: http://localhost:${PORT}`);
 });
 ```
+
 ---
 
 ## Using File System as file storage
 
 In this section, we will create API endpoints to handle file upload and store them on backend's `uploads` folder.
+
+![Filesystem (./uploads)](./img/filesystem.png)
 
 ### 1. Create `fileTable` in the database
 
@@ -114,10 +117,10 @@ Insert the `fileTable` scheme in the file `./db/schema.ts` as following.
 export const fileTable = pgTable("file", {
   id: uuid("id").primaryKey().defaultRandom(),
   filename: varchar("filename", { length: 255 }).notNull(),
-  itemId: uuid('item_id').notNull(),    // ref to a todo or a task item
+  itemId: uuid("item_id").notNull(), // ref to a todo or a task item
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date", precision: 3 }).$onUpdate(
-    () => new Date()
+    () => new Date(),
   ),
 });
 ```
@@ -132,7 +135,7 @@ We should be able to see a new `file` table in the database.
 
 ### 2. Install `multer` package
 
-To make our API supports **file upload**, we will use [multer](https://www.npmjs.com/package/multer) package, 
+To make our API supports **file upload**, we will use [multer](https://www.npmjs.com/package/multer) package,
 
 `Multer` is a Node.js middleware for handling `multipart/form-data`, which is primarily used for uploading files.
 
@@ -148,15 +151,20 @@ Create the file `./src/routes/fileRouter_v1.ts` with the following code to intil
 ```typescript
 // ./src/routes/fileRouter_v1.ts
 
-import express, { Router, type Request, type Response, type NextFunction } from "express";
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
+import express, {
+  Router,
+  type Request,
+  type Response,
+  type NextFunction,
+} from "express";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 
 const router = Router();
 
 // Ensure the upload directory exists locally
-const uploadDir = path.join(process.cwd(), 'uploads');
+const uploadDir = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir);
 }
@@ -168,26 +176,31 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     // Generate a unique timestamped file name
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
     const ext = path.extname(file.originalname);
-    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
-  }
+    cb(null, file.fieldname + "-" + uniqueSuffix + ext);
+  },
 });
 
 // 2. Filter files to allow only images
-const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('application/pdf')) {
+const fileFilter = (
+  req: Request,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback,
+) => {
+  if (
+    file.mimetype.startsWith("image/") ||
+    file.mimetype.startsWith("application/pdf")
+  ) {
     cb(null, true);
   } else {
-    cb(new Error('Only image and pdf files are allowed!'));
+    cb(new Error("Only image and pdf files are allowed!"));
   }
 };
 
 const upload = multer({ storage, fileFilter });
 
-
 // Insert endpoints' logic below
-
 
 // Global Error Handler for handling Multer/Upload issues
 router.use((err: any, req: Request, res: Response, next: NextFunction) => {
@@ -223,55 +236,62 @@ Insert the following code in the file `./src/routes/fileRouter_v1.ts`. This endp
 
 ```typescript
 // POST /file/upload - Endpoint to handle file upload
-router.post('/upload', upload.single('file'), async (req: Request, res: Response) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'Please select an image file to upload.' });
-  }
+router.post(
+  "/upload",
+  upload.single("file"),
+  async (req: Request, res: Response) => {
+    if (!req.file) {
+      return res
+        .status(400)
+        .json({ error: "Please select an image file to upload." });
+    }
 
-  const itemId = req.body.itemId;
-  const filename = req.file.filename;
+    const itemId = req.body.itemId;
+    const filename = req.file.filename;
 
-  // add filename to fileTable
-  const result = await dbClient
-    .insert(fileTable)
-    .values({
-      filename,
-      itemId 
-    })
-    .returning({ id: fileTable.id, itemId: fileTable.itemId})
+    // add filename to fileTable
+    const result = await dbClient
+      .insert(fileTable)
+      .values({
+        filename,
+        itemId,
+      })
+      .returning({ id: fileTable.id, itemId: fileTable.itemId });
 
-  // Construct a public view URL for the client
-  const fileUrl = `${req.protocol}://${req.get('host')}/file/view/${filename}`;
+    // Construct a public view URL for the client
+    const fileUrl = `${req.protocol}://${req.get("host")}/file/view/${filename}`;
 
-  res.status(201).json({
-    message: 'Image uploaded successfully!',
-    id: result[0].id,
-    itemId: result[0].itemId,
-    filename: filename,
-    size: req.file.size,
-    url: fileUrl
-  });
-});
+    res.status(201).json({
+      message: "Image uploaded successfully!",
+      id: result[0].id,
+      itemId: result[0].itemId,
+      filename: filename,
+      size: req.file.size,
+      url: fileUrl,
+    });
+  },
+);
 ```
+
 This endpoint takes in `file` and `itemId` (todoId or taskId) as input.
 
-We can use **Insomnia* to test this endpoint by providing `Multipart/form-data` in the request body as following.
+We can use \*_Insomnia_ to test this endpoint by providing `Multipart/form-data` in the request body as following.
 
 - In the `Body` section, choose `Form Data`.
 - `file` : choose file to upload
-- `itemId` : which `todo` or `task` item that the file will be attached. 
+- `itemId` : which `todo` or `task` item that the file will be attached.
 
 Note that the endpoint return `fileUrl` as part of its response. For example, it could be `http://localhost/file/view/:filename`.
 
 ```json
 // example of response from POST /file/upload
 {
-	"message": "Image uploaded successfully!",
-	"id": "21851af5-3ad2-483e-a7a1-ad42fff7feda",
-	"itemId": "ce0d2266-ff88-4fe3-8fa5-1a382e3342bd",
-	"filename": "file-1785298205990-943539974.png",
-	"size": 240858,
-	"url": "http://localhost:3001/file/view/file-1785298205990-943539974.png"
+  "message": "Image uploaded successfully!",
+  "id": "21851af5-3ad2-483e-a7a1-ad42fff7feda",
+  "itemId": "ce0d2266-ff88-4fe3-8fa5-1a382e3342bd",
+  "filename": "file-1785298205990-943539974.png",
+  "size": 240858,
+  "url": "http://localhost:3001/file/view/file-1785298205990-943539974.png"
 }
 ```
 
@@ -282,49 +302,50 @@ This endpoint provide access to an uploaded file which is stored in the `uploads
 ```typescript
 // Serve the "uploads" folder statically so users can view file
 // GET /file/view/:filename - Endpoint to access specific file
-router.use('/view', express.static(uploadDir));
+router.use("/view", express.static(uploadDir));
 ```
 
 It serves the `uploads` folder statically by the `express.static()` middleware.
 
 Now we should be able to view the uploaded file using `url`.
 
-
 ### 6. `GET /file` endpoint
 
 This endpoint return a list of all uploaded files stored in the `uploads` folder
 
 ```typescript
-// GET /file - Endpoint to list all files 
-router.get('/', (req: Request, res: Response): void => {
+// GET /file - Endpoint to list all files
+router.get("/", (req: Request, res: Response): void => {
   fs.readdir(uploadDir, (err, files) => {
     if (err) {
-      res.status(500).json({ error: 'Unable to scan directory structure' });
+      res.status(500).json({ error: "Unable to scan directory structure" });
       return;
     }
 
     // Map files to include complete metadata and functional access URLs
-    const fileList = files.map(file => {
-      const filePath = path.join(uploadDir, file);
-      let stats;
-      
-      try {
-          stats = fs.statSync(filePath);
-      } catch (statErr) {
-          return null; // Skip file if metadata reading fails
-      }
+    const fileList = files
+      .map((file) => {
+        const filePath = path.join(uploadDir, file);
+        let stats;
 
-      return {
+        try {
+          stats = fs.statSync(filePath);
+        } catch (statErr) {
+          return null; // Skip file if metadata reading fails
+        }
+
+        return {
           filename: file,
-          url: `${req.protocol}://${req.get('host')}/file/view/${file}`,
+          url: `${req.protocol}://${req.get("host")}/file/view/${file}`,
           size: stats.size,
-          createdAt: stats.birthtime
-      };
-    }).filter(Boolean); // Filter out any null entries
+          createdAt: stats.birthtime,
+        };
+      })
+      .filter(Boolean); // Filter out any null entries
 
     res.status(200).json({
       totalFiles: fileList.length,
-      files: fileList
+      files: fileList,
     });
   });
 });
@@ -334,15 +355,15 @@ Note that we does not include the logic to get file records from the `fileTable`
 
 ```json
 {
-	"totalFiles": 1,
-	"files": [
-		{
-			"filename": "image-1785296417555-718238840.png",
-			"url": "http://localhost:3001/file/view/image-1785296417555-718238840.png",
-			"size": 44601,
-			"createdAt": "2026-07-29T03:40:17.551Z"
-		}
-	]
+  "totalFiles": 1,
+  "files": [
+    {
+      "filename": "image-1785296417555-718238840.png",
+      "url": "http://localhost:3001/file/view/image-1785296417555-718238840.png",
+      "size": 44601,
+      "createdAt": "2026-07-29T03:40:17.551Z"
+    }
+  ]
 }
 ```
 
@@ -354,11 +375,13 @@ This endpoint gets `:filename` to be deleted as parameterized URL.
 
 ```typescript
 // DELETE /file/:filename - Endpoint to delete a specific file by name
-router.delete('/', (req: Request, res: Response): void => {
+router.delete("/", (req: Request, res: Response): void => {
   const filename = req.query.filename as string;
 
   if (!filename) {
-    res.status(400).json({ error: 'Filename parameter is required in the body' });
+    res
+      .status(400)
+      .json({ error: "Filename parameter is required in the body" });
     return;
   }
 
@@ -368,20 +391,23 @@ router.delete('/', (req: Request, res: Response): void => {
 
   // Verify file path belongs to the directory and exists
   if (!fs.existsSync(filePath)) {
-    res.status(404).json({ error: 'File not found' });
+    res.status(404).json({ error: "File not found" });
     return;
   }
 
   fs.unlink(filePath, (err) => {
     if (err) {
-      res.status(500).json({ error: 'Failed to delete file' });
+      res.status(500).json({ error: "Failed to delete file" });
       return;
     }
-    res.status(200).json({ message: `File ${safeFilename} deleted successfully` });
+    res
+      .status(200)
+      .json({ message: `File ${safeFilename} deleted successfully` });
   });
 });
 ```
-Note that we does not include the logic to remove a file record from `fileTable`. 
+
+Note that we does not include the logic to remove a file record from `fileTable`.
 
 ### 8. `POST /file/reset` endpoint
 
@@ -389,15 +415,15 @@ Finally, we will create an endpoint for deleting all upload files.
 
 ```typescript
 // POST Endpoint to delete ALL files in the directory
-router.post('/reset', (req: Request, res: Response): void => {
+router.post("/reset", (req: Request, res: Response): void => {
   fs.readdir(uploadDir, (err, files) => {
     if (err) {
-      res.status(500).json({ error: 'Failed to read directory' });
+      res.status(500).json({ error: "Failed to read directory" });
       return;
     }
 
     if (files.length === 0) {
-      res.status(200).json({ message: 'Directory is already empty' });
+      res.status(200).json({ message: "Directory is already empty" });
       return;
     }
 
@@ -414,25 +440,27 @@ router.post('/reset', (req: Request, res: Response): void => {
     // Execute all deletions concurrently
     Promise.all(deletionPromises)
       .then(() => {
-        res.status(200).json({ 
-            message: 'All files deleted successfully', 
-            count: files.length 
+        res.status(200).json({
+          message: "All files deleted successfully",
+          count: files.length,
         });
       })
       .catch((error) => {
-        res.status(500).json({ error: 'Failed to delete some files cleanly' });
+        res.status(500).json({ error: "Failed to delete some files cleanly" });
       });
   });
 });
 ```
 
-Note that we does not include the logic to remove all file records from `fileTable`. 
+Note that we does not include the logic to remove all file records from `fileTable`.
 
 ---
 
 ## Using Object Storage as file storage
 
 In this section, we will create API endpoints that store uploaded files in an **Object Data Store** service.
+
+![Minio - Object Storage](./img/minio.png)
 
 ### 1. Install `minio` package
 
@@ -474,6 +502,7 @@ networks:
   preflight_pf-net:
     external: true
 ```
+
 Next, edit MinIO environment variables in `.env` file.
 
 ```
@@ -489,13 +518,14 @@ MINIO_USE_SSL=false
 MINIO_ACCESS_KEY=...
 MINIO_SECRET_KEY=...
 ```
+
 Start a Minio container with the following command.
 
 ```bash
 docker compose -f compose-minio.yml up -d
 ```
 
-This creates the `minio-server` container that connects the same docker network, `preflight_pf-net`. 
+This creates the `minio-server` container that connects the same docker network, `preflight_pf-net`.
 
 Now we should be able to access MinIO's management console at `http://localhost:9001`.
 
@@ -577,38 +607,38 @@ sh-5.1# mc ls localminio
 [2026-07-29 07:30:58 UTC]     0B todo-bucket/
 ```
 
-### 4. Create MinIO Client 
+### 4. Create MinIO Client
 
 Now we can create MinIO client object in the file `./minio/minioClient.ts` using this code.
 
 ```typescript
 // ./minio/minioClient.ts
-import * as Minio from 'minio';
-import dotenv from 'dotenv';
+import * as Minio from "minio";
+import dotenv from "dotenv";
 
 dotenv.config();
 
 export const minioClient = new Minio.Client({
-  endPoint: process.env.MINIO_ENDPOINT || 'localhost',
-  port: parseInt(process.env.MINIO_API_PORT || '9000'),
+  endPoint: process.env.MINIO_ENDPOINT || "localhost",
+  port: parseInt(process.env.MINIO_API_PORT || "9000"),
   useSSL: false,
-  accessKey: process.env.MINIO_ACCESS_KEY || 'minioadmin',
-  secretKey: process.env.MINIO_SECRET_KEY || 'miniopassword',
+  accessKey: process.env.MINIO_ACCESS_KEY || "minioadmin",
+  secretKey: process.env.MINIO_SECRET_KEY || "miniopassword",
 });
 
-export const BUCKET_NAME = process.env.MINIO_BUCKET || 'my-app';
+export const BUCKET_NAME = process.env.MINIO_BUCKET || "my-app";
 
 // Automatically ensure the bucket exists on application startup
 export const initMinIO = async () => {
   try {
     const exists = await minioClient.bucketExists(BUCKET_NAME);
     if (!exists) {
-      await minioClient.makeBucket(BUCKET_NAME, 'us-east-1');
+      await minioClient.makeBucket(BUCKET_NAME, "us-east-1");
       console.log(`Bucket "${BUCKET_NAME}" created successfully.`);
     }
     console.log(`Successfully connects to Minio bucket "${BUCKET_NAME}"`);
-  } catch(err) {
-    console.log(`Unable to connect to Minio`)
+  } catch (err) {
+    console.log(`Unable to connect to Minio`);
   }
 };
 ```
@@ -620,17 +650,26 @@ export const initMinIO = async () => {
 Create the file `./src/routes/fileRouter_v2.ts` with the following code.
 
 ```typescript
-import express, { Router, type Request, type Response, type NextFunction } from "express";
-import { minioClient, BUCKET_NAME, initMinIO } from '../../minio/minioClient.ts';
-import * as Minio from 'minio';
+import express, {
+  Router,
+  type Request,
+  type Response,
+  type NextFunction,
+} from "express";
+import {
+  minioClient,
+  BUCKET_NAME,
+  initMinIO,
+} from "../../minio/minioClient.ts";
+import * as Minio from "minio";
 
-import multer from 'multer';
-import path from 'path';
+import multer from "multer";
+import path from "path";
 
 import { dbClient } from "@db/client.js";
 import { fileTable } from "@db/schema.js";
 
-import dotenv from 'dotenv';
+import dotenv from "dotenv";
 dotenv.config();
 
 const router = Router();
@@ -640,15 +679,23 @@ const router = Router();
 const storage = multer.memoryStorage();
 
 // Filter files to allow only images
-const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+const fileFilter = (
+  req: Request,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback,
+) => {
   const allowedTypes = /jpeg|jpg|png|webp|pdf/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
+  const extname = allowedTypes.test(
+    path.extname(file.originalname).toLowerCase(),
+  );
+  const mimetype = allowedTypes.test(file.mimetype);
 
-    if (extname && mimetype) {
-      return cb(null, true);
-    }
-    cb(new Error('Only web image formats (JPEG, PNG, WEBP) and PDF are allowed!'));
+  if (extname && mimetype) {
+    return cb(null, true);
+  }
+  cb(
+    new Error("Only web image formats (JPEG, PNG, WEBP) and PDF are allowed!"),
+  );
 };
 
 // Limite file size to 10MB
@@ -657,26 +704,24 @@ const fileSize = 10 * 1024 * 1024;
 const PORT = process.env.PORT || 3000;
 
 // Configure multer
-const upload = multer({ 
-  storage, 
-  limits: { fileSize: fileSize }, 
-  fileFilter 
+const upload = multer({
+  storage,
+  limits: { fileSize: fileSize },
+  fileFilter,
 });
-
 
 // Insert endpoints below
 
-
 // Global Error Handler
 router.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  res.status(500).json({ error: err.message || 'Internal Server Error' });
+  res.status(500).json({ error: err.message || "Internal Server Error" });
 });
 
 // Initialize storage configuration and start server
 try {
   await initMinIO();
-} catch(err) {
-  console.error('Failed to initialize MinIO storage client:', err);
+} catch (err) {
+  console.error("Failed to initialize MinIO storage client:", err);
 }
 
 export default router;
@@ -709,55 +754,62 @@ In the file `./src/routes/fileRouter_v2.ts`, insert code for the endpoint.
 
 ```typescript
 // POST /v2/file/upload - Endpoint to handle file upload
-router.post('/upload', upload.single('file'), async (req: Request, res: Response): Promise<any> => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No image or pdf file provided.' });
+router.post(
+  "/upload",
+  upload.single("file"),
+  async (req: Request, res: Response): Promise<any> => {
+    try {
+      if (!req.file) {
+        return res
+          .status(400)
+          .json({ error: "No image or pdf file provided." });
+      }
+
+      // Generate a unique object name to prevent file collisions
+      const fileExtension = path.extname(req.file.originalname);
+      const filename = path.parse(req.file.originalname).name;
+      const cleanFilename = filename.replace(/\s+/g, "_").toLowerCase();
+      // console.log(cleanFilename);
+
+      // use itemId as a folder to store the object
+      const itemId = req.body.itemId;
+      const objectName = `${itemId}/${cleanFilename}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}${fileExtension}`;
+
+      // Upload buffer data directly to MinIO
+      await minioClient.putObject(
+        BUCKET_NAME,
+        objectName,
+        req.file.buffer,
+        req.file.size,
+        {
+          // metadata for rendering
+          "Content-Type": req.file.mimetype,
+          itemId: itemId,
+        },
+      );
+
+      // add filename to file table
+      const result = await dbClient
+        .insert(fileTable)
+        .values({
+          filename: objectName,
+          itemId: itemId,
+        })
+        .returning({ id: fileTable.id, itemId: fileTable.itemId });
+
+      return res.status(201).json({
+        message: "Image uploaded successfully",
+        id: result[0].id,
+        itemId: result[0].itemId,
+        fileName: objectName,
+        viewUrl: `http://localhost:${PORT}/v2/file/view/${encodeURIComponent(objectName)}`,
+      });
+    } catch (error) {
+      console.error("Upload error:", error);
+      return res.status(500).json({ error: "Failed to upload image." });
     }
-
-    // Generate a unique object name to prevent file collisions
-    const fileExtension = path.extname(req.file.originalname);
-    const filename = path.parse(req.file.originalname).name;
-    const cleanFilename = filename.replace(/\s+/g, '_').toLowerCase();
-    // console.log(cleanFilename);
-
-    // use itemId as a folder to store the object
-    const itemId = req.body.itemId;
-    const objectName = `${itemId}/${cleanFilename}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}${fileExtension}`;
-    
-    // Upload buffer data directly to MinIO
-    await minioClient.putObject(
-      BUCKET_NAME,
-      objectName,
-      req.file.buffer,
-      req.file.size,
-      { // metadata for rendering
-        'Content-Type': req.file.mimetype,
-        'itemId': itemId
-      } 
-    );
-
-    // add filename to file table
-    const result = await dbClient
-      .insert(fileTable)
-      .values({
-        filename: objectName,
-        itemId: itemId 
-      })
-      .returning({ id: fileTable.id, itemId: fileTable.itemId});
-
-    return res.status(201).json({
-      message: 'Image uploaded successfully',
-      id: result[0].id,
-      itemId: result[0].itemId,
-      fileName: objectName,
-      viewUrl: `http://localhost:${PORT}/v2/file/view/${encodeURIComponent(objectName)}`
-    });
-  } catch (error) {
-    console.error('Upload error:', error);
-    return res.status(500).json({ error: 'Failed to upload image.' });
-  }
-});
+  },
+);
 ```
 
 Similary, this endpoint takes in `file` and `itemId` (todoId or taskId) as input.
@@ -765,11 +817,11 @@ Similary, this endpoint takes in `file` and `itemId` (todoId or taskId) as input
 ```json
 // Example of response from POST /v2/file/upload
 {
-	"message": "Image uploaded successfully",
-	"id": "990c747a-c036-45ba-ae4c-09e2beea4a91",
-	"itemId": "ce0d2266-ff88-4fe3-8fa5-1a382e3342bd",
-	"fileName": "ce0d2266-ff88-4fe3-8fa5-1a382e3342bd/screenshot_2025-06-27_094757-1785315883979-2oszi19.png",
-	"viewUrl": "http://localhost:3001/v2/file/view/ce0d2266-ff88-4fe3-8fa5-1a382e3342bd%2Fscreenshot_2025-06-27_094757-1785315883979-2oszi19.png"
+  "message": "Image uploaded successfully",
+  "id": "990c747a-c036-45ba-ae4c-09e2beea4a91",
+  "itemId": "ce0d2266-ff88-4fe3-8fa5-1a382e3342bd",
+  "fileName": "ce0d2266-ff88-4fe3-8fa5-1a382e3342bd/screenshot_2025-06-27_094757-1785315883979-2oszi19.png",
+  "viewUrl": "http://localhost:3001/v2/file/view/ce0d2266-ff88-4fe3-8fa5-1a382e3342bd%2Fscreenshot_2025-06-27_094757-1785315883979-2oszi19.png"
 }
 ```
 
@@ -783,27 +835,28 @@ This endpoint provide access to an uploaded file stored in `MinIO`.
 
 ```typescript
 // GET /v2/file/view/:filename - Endpoint to access file (Streams object safely from storage)
-router.get('/view/:filename', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const filename = req.params.filename as string;
+router.get(
+  "/view/:filename",
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const filename = req.params.filename as string;
 
-    // Fetch object metadata to get the original content type
-    const stat = await minioClient.statObject(BUCKET_NAME, filename);
-    res.setHeader('Content-Type', stat.metaData['content-type']);
+      // Fetch object metadata to get the original content type
+      const stat = await minioClient.statObject(BUCKET_NAME, filename);
+      res.setHeader("Content-Type", stat.metaData["content-type"]);
 
-    // Stream the image file directly to the client response
-    const dataStream = await minioClient.getObject(BUCKET_NAME, filename);
-    dataStream.pipe(res);
-
-  } catch (error: any) {
-    if (error.code === 'NoSuchKey') {
-      res.status(404).json({ error: 'File not found.' });
-      return;
+      // Stream the image file directly to the client response
+      const dataStream = await minioClient.getObject(BUCKET_NAME, filename);
+      dataStream.pipe(res);
+    } catch (error: any) {
+      if (error.code === "NoSuchKey") {
+        res.status(404).json({ error: "File not found." });
+        return;
+      }
+      next(error);
     }
-    next(error);
-  }
-});
-
+  },
+);
 ```
 
 Now we should be able to view the uploaded file using `viewUrl`.
@@ -813,23 +866,26 @@ Now we should be able to view the uploaded file using `viewUrl`.
 This endpoint return a list of uploaded files identified by query parameters `prefix` and `suffix`.
 
 ```typescript
-// GET /v2/file?prefix=xxx&suffix=yyy - Endpoint to list files 
-router.get('/', (req: Request, res: Response, next: NextFunction): void => {
-try {
+// GET /v2/file?prefix=xxx&suffix=yyy - Endpoint to list files
+router.get("/", (req: Request, res: Response, next: NextFunction): void => {
+  try {
     // Optional: filter by virtual folder path (e.g., /list?prefix=avatars/)
-    const prefix = (req.query.prefix as string) || ''; // folder in a bucket
-    const suffix = (req.query.suffix as string) || ''; // e.g., "png" or "pdf"
+    const prefix = (req.query.prefix as string) || ""; // folder in a bucket
+    const suffix = (req.query.suffix as string) || ""; // e.g., "png" or "pdf"
 
     // Create an object stream from MinIO
     // Set recursive to true to list items inside subdirectories
     const stream = minioClient.listObjectsV2(BUCKET_NAME, prefix, true);
-    
+
     const objects: Minio.BucketItem[] = [];
 
     // Collect stream data chunks into an array
-    stream.on('data', (obj) => {
+    stream.on("data", (obj) => {
       // filter by suffix (.png, .pdf)
-      if (obj.name && obj.name.toLowerCase().endsWith(`.${suffix.toLowerCase()}`)) {
+      if (
+        obj.name &&
+        obj.name.toLowerCase().endsWith(`.${suffix.toLowerCase()}`)
+      ) {
         objects.push(obj);
       } else if (!suffix) {
         objects.push(obj);
@@ -837,24 +893,23 @@ try {
     });
 
     // Handle stream conclusion and return data
-    stream.on('end', () => {
+    stream.on("end", () => {
       res.status(200).json({
         count: objects.length,
         prefix: prefix || null,
-        files: objects.map(file => ({
+        files: objects.map((file) => ({
           name: file.name,
           size: file.size,
           lastModified: file.lastModified,
-          etag: file.etag
-        }))
+          etag: file.etag,
+        })),
       });
     });
 
     // Handle internal stream connection errors
-    stream.on('error', (err) => {
+    stream.on("error", (err) => {
       next(err);
     });
-
   } catch (error) {
     next(error);
   }
@@ -866,54 +921,53 @@ try {
 This endpoint handles object deletion.
 
 ```typescript
-// DELETE /v2/file/folder/*filePath - Endpoint to delete an file 
-router.delete('/folder/*filePath', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-
-    // Example URL: /v2/file/folder/xxxxx/image.png
-    // Result: req.params.filePath = ['xxxxx', 'image.png']
-    const filePath = req.params.filePath;
-    console.log(filePath);
-
-    if (!filePath || filePath.length === 0) {
-      res.status(400).json({ error: 'No file path provided.' });
-      return;
-    }
-
-    // Re-combine segments with forward slashes for MinIO
-    const fullStoragePath = Array.isArray(filePath) 
-      ? filePath.join('/') 
-      : filePath; // Fallback if parsed as a string in certain setups
-
-    console.log(fullStoragePath);
-
-    // Check if the object exists before attempting deletion
+// DELETE /v2/file/folder/*filePath - Endpoint to delete an file
+router.delete(
+  "/folder/*filePath",
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      await minioClient.statObject(BUCKET_NAME, fullStoragePath);
+      // Example URL: /v2/file/folder/xxxxx/image.png
+      // Result: req.params.filePath = ['xxxxx', 'image.png']
+      const filePath = req.params.filePath;
+      console.log(filePath);
 
-    } catch (statError: any) {
-      
-      res.status(404).json({ 
-        msg: 'File not found in storage.',
-        error: statError 
+      if (!filePath || filePath.length === 0) {
+        res.status(400).json({ error: "No file path provided." });
+        return;
+      }
+
+      // Re-combine segments with forward slashes for MinIO
+      const fullStoragePath = Array.isArray(filePath)
+        ? filePath.join("/")
+        : filePath; // Fallback if parsed as a string in certain setups
+
+      console.log(fullStoragePath);
+
+      // Check if the object exists before attempting deletion
+      try {
+        await minioClient.statObject(BUCKET_NAME, fullStoragePath);
+      } catch (statError: any) {
+        res.status(404).json({
+          msg: "File not found in storage.",
+          error: statError,
+        });
+        return;
+        throw statError; // Pass any other internal MinIO errors down
+      }
+
+      // Delete the object from the MinIO bucket
+      await minioClient.removeObject(BUCKET_NAME, fullStoragePath);
+
+      // Return successful response
+      res.status(200).json({
+        message: "Image deleted successfully",
+        filename: fullStoragePath,
       });
-      return;
-      throw statError; // Pass any other internal MinIO errors down
+    } catch (error) {
+      next(error); // Forwards to your global error handler
     }
-
-    // Delete the object from the MinIO bucket
-    await minioClient.removeObject(BUCKET_NAME, fullStoragePath);
-
-    // Return successful response
-    res.status(200).json({
-      message: 'Image deleted successfully',
-      filename: fullStoragePath
-    });
-
-  } catch (error) {
-    next(error); // Forwards to your global error handler
-  }
-});
+  },
+);
 ```
 
 The `/*filePath` parameter is crucial because the `objectName` contains `/` symbol. This must be translated into `folder/filename`.
