@@ -27,41 +27,46 @@ pnpm approve-builds
 
 This tutorial also requires a `PostgreSQL` database. We can use the [pf-db](https://github.com/fullstack-69/pf-db.git) project.
 
+![todo table](./img/db1.png)
+
 ---
 
 ## One-to-Many Relationship with Drizzle
+
+![more tables](./img/db2.png)
 
 We will allow a `todo` item to have multiple `sub-task`. In order to do that we need to modify `drizzle schema` in the file `./db/schema.ts` by adding the following code:
 
 ```typescript
 // 2. Define the TASK table with a foreign key referencing the TODO table
-export const taskTable = pgTable('tasks', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  taskText: varchar('task_text', { length:255 }).notNull(),
+export const taskTable = pgTable("tasks", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  taskText: varchar("task_text", { length: 255 }).notNull(),
   isDone: boolean("is_done").default(false),
-  todoId: uuid('todo_id')
+  todoId: uuid("todo_id")
     .notNull()
-    .references(() => todoTable.id, { onDelete: 'cascade' }), // Automatically deletes TASK if the TODO is deleted
+    .references(() => todoTable.id, { onDelete: "cascade" }), // Automatically deletes TASK if the TODO is deleted
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date", precision: 3 }).$onUpdate(
-    () => new Date()
-  )
+    () => new Date(),
+  ),
 });
 
 // 3. Define the One-to-Many relationships
 export const todoRelations = relations(todoTable, ({ many }) => ({
-  tasks: many(taskTable),           // One Todo can have many Tasks
+  tasks: many(taskTable), // One Todo can have many Tasks
 }));
 
 export const taskRelations = relations(taskTable, ({ one }) => ({
   todo: one(todoTable, {
-    fields: [taskTable.todoId],     // The foreign key column in the TASK table
-    references: [todoTable.id],     // The primary key column in the TODO table
+    fields: [taskTable.todoId], // The foreign key column in the TASK table
+    references: [todoTable.id], // The primary key column in the TODO table
   }),
 }));
 ```
 
-**Note:** 
+**Note:**
+
 - The `taskTable.todoId` is a `foreign key` that enforce `one-to-many` relationship between a `todo` with a list of `tasks`.
 - `{ onDelete: 'cascade' }` is defined on the `foreign key`, deleting the parent `todo` item will automatically delete all associated `tasks` in a single database operation.
 
@@ -79,10 +84,10 @@ Create new functions as prototype in the file `./db/prototype.ts` as following:
 
 ```typescript
 // Insert a new task under specified todo item (by todoId)
-async function insertTaskData(todo_id:string) {
+async function insertTaskData(todo_id: string) {
   await dbClient.insert(taskTable).values({
-    taskText: `Task - ${new Date()}`,     // create taskText using Date() function
-    todoId: todo_id
+    taskText: `Task - ${new Date()}`, // create taskText using Date() function
+    todoId: todo_id,
   });
   dbConn.end();
 }
@@ -90,7 +95,7 @@ async function insertTaskData(todo_id:string) {
 // Get all todo items along with their sub tasks
 async function queryWithTaskData() {
   const results = await dbClient.query.todoTable.findMany({
-    with: { tasks: true}                  // also get its sub tasks
+    with: { tasks: true }, // also get its sub tasks
   });
   console.log(results);
   dbConn.end();
@@ -101,9 +106,9 @@ At the end of the file add some function calls to test above functions.
 
 ```typescript
 // insert a task under specified todoId
-insertTaskData('3c7ad5bd-8b12-48a2-bc2f-eca58bc72e71');
+insertTaskData("3c7ad5bd-8b12-48a2-bc2f-eca58bc72e71");
 
-// get all todo items along with their tasks 
+// get all todo items along with their tasks
 // queryWithTaskData();
 ```
 
@@ -131,9 +136,13 @@ app.put("/todo/task", async (req, res, next) => {
       .insert(taskTable)
       .values({
         taskText,
-        todoId
+        todoId,
       })
-      .returning({ id: taskTable.id, taskText: taskTable.taskText, todoId: taskTable.todoId });
+      .returning({
+        id: taskTable.id,
+        taskText: taskTable.taskText,
+        todoId: taskTable.todoId,
+      });
     res.json({ msg: `Insert successfully`, data: result[0] });
   } catch (err) {
     next(err);
@@ -168,12 +177,11 @@ After adding a `foreign key` in our database schema, we have also implemented th
 
 1. Resetting our TODO database by make a request to `POST /todo/all` to delete all todo data.
 
-
 ```json
 // Response from POST /todo/all
 {
-	"msg": "Delete all rows successfully",
-	"data": {}
+  "msg": "Delete all rows successfully",
+  "data": {}
 }
 ```
 
@@ -182,11 +190,11 @@ After adding a `foreign key` in our database schema, we have also implemented th
 ```json
 // Example response from PUT /todo
 {
-	"msg": "Insert successfully",
-	"data": {
-		"id": "870050c7-fa64-4313-af37-958b96d17ea6",
-		"todoText": "Todo item #2"
-	}
+  "msg": "Insert successfully",
+  "data": {
+    "id": "870050c7-fa64-4313-af37-958b96d17ea6",
+    "todoText": "Todo item #2"
+  }
 }
 ```
 
@@ -196,22 +204,22 @@ Make sure to make a copy of the `id`. We will use them when adding a sub `task` 
 
 ```json
 [
-	{
-		"id": "ce3931b7-797f-47fd-88cd-6157c31487e8",
-		"todoText": "Todo item #1",
-		"isDone": false,
-		"createdAt": "2026-07-28T07:07:53.607Z",
-		"updatedAt": "2026-07-28T00:07:53.599Z",
-		"tasks": []
-	},
-	{
-		"id": "870050c7-fa64-4313-af37-958b96d17ea6",
-		"todoText": "Todo item #2",
-		"isDone": false,
-		"createdAt": "2026-07-28T07:08:47.839Z",
-		"updatedAt": "2026-07-28T00:08:47.830Z",
-		"tasks": []
-	}
+  {
+    "id": "ce3931b7-797f-47fd-88cd-6157c31487e8",
+    "todoText": "Todo item #1",
+    "isDone": false,
+    "createdAt": "2026-07-28T07:07:53.607Z",
+    "updatedAt": "2026-07-28T00:07:53.599Z",
+    "tasks": []
+  },
+  {
+    "id": "870050c7-fa64-4313-af37-958b96d17ea6",
+    "todoText": "Todo item #2",
+    "isDone": false,
+    "createdAt": "2026-07-28T07:08:47.839Z",
+    "updatedAt": "2026-07-28T00:08:47.830Z",
+    "tasks": []
+  }
 ]
 ```
 
@@ -234,43 +242,43 @@ This includes `iso-8601 timestamp` as part of `taskText`. We can send this reque
 ```json
 // Example of response from `GET /todo`
 [
-	{
-		"id": "ce3931b7-797f-47fd-88cd-6157c31487e8",
-		"todoText": "Todo item #1",
-		"isDone": false,
-		"createdAt": "2026-07-28T07:07:53.607Z",
-		"updatedAt": "2026-07-28T00:07:53.599Z",
-		"tasks": []
-	},
-	{
-		"id": "870050c7-fa64-4313-af37-958b96d17ea6",
-		"todoText": "Todo item #2",
-		"isDone": false,
-		"createdAt": "2026-07-28T07:08:47.839Z",
-		"updatedAt": "2026-07-28T00:08:47.830Z",
-		"tasks": [
-			{
-				"id": "2200daa9-f9b0-4096-bfaf-a2da9ac01dc3",
-				"taskText": "sub task #2026-07-28T00:23:48.566Z ",
-				"isDone": false,
-				"todoId": "870050c7-fa64-4313-af37-958b96d17ea6",
-				"createdAt": "2026-07-28T07:23:48.580Z",
-				"updatedAt": "2026-07-28T00:23:48.572Z"
-			},
-			{
-				"id": "00a6f665-a861-435a-ba38-9deb66488d49",
-				"taskText": "sub task #2026-07-28T00:23:59.156Z ",
-				"isDone": false,
-				"todoId": "870050c7-fa64-4313-af37-958b96d17ea6",
-				"createdAt": "2026-07-28T07:23:59.166Z",
-				"updatedAt": "2026-07-28T00:23:59.158Z"
-			}
-		]
-	}
+  {
+    "id": "ce3931b7-797f-47fd-88cd-6157c31487e8",
+    "todoText": "Todo item #1",
+    "isDone": false,
+    "createdAt": "2026-07-28T07:07:53.607Z",
+    "updatedAt": "2026-07-28T00:07:53.599Z",
+    "tasks": []
+  },
+  {
+    "id": "870050c7-fa64-4313-af37-958b96d17ea6",
+    "todoText": "Todo item #2",
+    "isDone": false,
+    "createdAt": "2026-07-28T07:08:47.839Z",
+    "updatedAt": "2026-07-28T00:08:47.830Z",
+    "tasks": [
+      {
+        "id": "2200daa9-f9b0-4096-bfaf-a2da9ac01dc3",
+        "taskText": "sub task #2026-07-28T00:23:48.566Z ",
+        "isDone": false,
+        "todoId": "870050c7-fa64-4313-af37-958b96d17ea6",
+        "createdAt": "2026-07-28T07:23:48.580Z",
+        "updatedAt": "2026-07-28T00:23:48.572Z"
+      },
+      {
+        "id": "00a6f665-a861-435a-ba38-9deb66488d49",
+        "taskText": "sub task #2026-07-28T00:23:59.156Z ",
+        "isDone": false,
+        "todoId": "870050c7-fa64-4313-af37-958b96d17ea6",
+        "createdAt": "2026-07-28T07:23:59.166Z",
+        "updatedAt": "2026-07-28T00:23:59.158Z"
+      }
+    ]
+  }
 ]
 ```
 
-6. Try making a request to `PUT /todo/task` again with **INVALID** todo's `id`. 
+6. Try making a request to `PUT /todo/task` again with **INVALID** todo's `id`.
 
 ```json
 \\ JSON body of request
@@ -284,13 +292,13 @@ We should get a response with `error message`.
 
 ```json
 {
-	"message": "Failed query: insert into \"tasks\" (\"id\", \"task_text\", \"is_done\", \"todo_id\", \"created_at\", \"updated_at\") values (default, $1, default, $2, default, $3) returning \"id\", \"task_text\", \"todo_id\"\nparams: sub task #2026-07-28T00:30:31.119Z ,870050c7-fa64-0000-0000-000000000000,2026-07-28T00:30:31.119Z",
-	"type": "Error",
-	"stack": "Error: ..."
+  "message": "Failed query: insert into \"tasks\" (\"id\", \"task_text\", \"is_done\", \"todo_id\", \"created_at\", \"updated_at\") values (default, $1, default, $2, default, $3) returning \"id\", \"task_text\", \"todo_id\"\nparams: sub task #2026-07-28T00:30:31.119Z ,870050c7-fa64-0000-0000-000000000000,2026-07-28T00:30:31.119Z",
+  "type": "Error",
+  "stack": "Error: ..."
 }
 ```
 
-The insert operation was not allowed because we tried to refer a `task` to **non-existing** `todo` item. 
+The insert operation was not allowed because we tried to refer a `task` to **non-existing** `todo` item.
 
 7. To delete a `todo` item, we make a request to `DELETE /todo` endpoint with specified todo's `id`.
 
@@ -306,10 +314,10 @@ This operation should delete the specified `todo` item along with its `task` ite
 ```json
 // Example response from DELETE /todo
 {
-	"msg": "Delete successfully",
-	"data": {
-		"id": "870050c7-fa64-4313-af37-958b96d17ea6"
-	}
+  "msg": "Delete successfully",
+  "data": {
+    "id": "870050c7-fa64-4313-af37-958b96d17ea6"
+  }
 }
 ```
 
@@ -317,14 +325,14 @@ This operation should delete the specified `todo` item along with its `task` ite
 
 ```json
 [
-	{
-		"id": "ce3931b7-797f-47fd-88cd-6157c31487e8",
-		"todoText": "Todo item #1",
-		"isDone": false,
-		"createdAt": "2026-07-28T07:07:53.607Z",
-		"updatedAt": "2026-07-28T00:07:53.599Z",
-		"tasks": []
-	}
+  {
+    "id": "ce3931b7-797f-47fd-88cd-6157c31487e8",
+    "todoText": "Todo item #1",
+    "isDone": false,
+    "createdAt": "2026-07-28T07:07:53.607Z",
+    "updatedAt": "2026-07-28T00:07:53.599Z",
+    "tasks": []
+  }
 ]
 ```
 
@@ -344,30 +352,28 @@ interface UserMetadata {
   isActive: boolean;
   address?: {
     street?: string;
-    city:string;
-  }
+    city: string;
+  };
 }
 
 // 4. Define the USER table
 export const userTable = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
-  email: varchar("email", { length: 100}).notNull().unique(),
+  email: varchar("email", { length: 100 }).notNull().unique(),
   displayName: varchar("displayName", { length: 30 }).notNull(),
-  metadata: jsonb('metadata')
-    .$type<UserMetadata>(),     // type enforcement in development process
-    // .notNull()
-    // .default({               // Option: setting default values
-    //   name: 'john doe',
-    //   role: 'Member',
-    //   isActive: true
-    // }),
+  metadata: jsonb("metadata").$type<UserMetadata>(), // type enforcement in development process
+  // .notNull()
+  // .default({               // Option: setting default values
+  //   name: 'john doe',
+  //   role: 'Member',
+  //   isActive: true
+  // }),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date", precision: 3 }).$onUpdate(
-    () => new Date()
+    () => new Date(),
   ),
 });
-
 ```
 
 A `user` contains the follow columns:
@@ -390,8 +396,7 @@ Add the following code of `PUT /user` in the file `./index.ts`.
 // PUT /user - Insert a user
 app.put("/user", async (req, res, next) => {
   try {
-    
-    const email = req.body.email
+    const email = req.body.email;
     const displayName = req.body.displayName;
     const metadata = req.body.metadata;
 
@@ -400,13 +405,13 @@ app.put("/user", async (req, res, next) => {
       .values({
         email: email,
         displayName: displayName,
-        metadata: metadata
+        metadata: metadata,
       })
-      .returning({ 
+      .returning({
         id: userTable.id,
-        email: userTable.email, 
+        email: userTable.email,
         displayName: userTable.displayName,
-        metadata: userTable.metadata
+        metadata: userTable.metadata,
       });
     res.json({ msg: `Insert successfully`, data: result[0] });
   } catch (err) {
@@ -422,16 +427,16 @@ We can insert `metadata` as JSON object into the `userTable.metadata` column.
 ```json
 // Example of JSON body
 {
-	"email": "user1@abc.com",
-	"displayName": "Apollo",
-	"metadata": {
-		"name": "Theo Ragna",
-		"role": "Leader",
-		"isActive": true,
-		"address": {
-			"city": "Chiang Mai"
-		}
-	}
+  "email": "user1@abc.com",
+  "displayName": "Apollo",
+  "metadata": {
+    "name": "Theo Ragna",
+    "role": "Leader",
+    "isActive": true,
+    "address": {
+      "city": "Chiang Mai"
+    }
+  }
 }
 ```
 
@@ -440,20 +445,20 @@ We should get a response as shown below if it is successful.
 ```json
 // Example of response from PUT /user
 {
-	"msg": "Insert successfully",
-	"data": {
-		"id": "4d73388d-68e8-4af8-b165-7230b5d58a90",
-		"email": "user1@abc.com",
-		"displayName": "Apollo",
-		"metadata": {
-			"name": "Theo Ragna",
-			"role": "Leader",
-			"address": {
-				"city": "Chiang Mai"
-			},
-			"isActive": true
-		}
-	}
+  "msg": "Insert successfully",
+  "data": {
+    "id": "4d73388d-68e8-4af8-b165-7230b5d58a90",
+    "email": "user1@abc.com",
+    "displayName": "Apollo",
+    "metadata": {
+      "name": "Theo Ragna",
+      "role": "Leader",
+      "address": {
+        "city": "Chiang Mai"
+      },
+      "isActive": true
+    }
+  }
 }
 ```
 
@@ -476,7 +481,7 @@ app.get("/user", async (req, res, next) => {
       res.json(results);
     } else if (email && !role) {
       const results = await dbClient.query.userTable.findFirst({
-        where: (userTable, {eq}) => eq(userTable.email, email),
+        where: (userTable, { eq }) => eq(userTable.email, email),
       });
       res.json(results);
     } else if (!email && role) {
@@ -486,7 +491,6 @@ app.get("/user", async (req, res, next) => {
         .where(sql`${userTable.metadata}->>'role' = ${role}`);
       res.json(results);
     }
-    
   } catch (err) {
     next(err);
   }
@@ -506,7 +510,7 @@ Now we can test the `GET /user` endpoint with 3 different ways:
 In Drizzle ORM, you can achieve **application-level column encryption** by defining a `customType`.
 
 - Automatically `encrypts` data before it writes to the database.
-- `Decrypts` the data when read. 
+- `Decrypts` the data when read.
 - This keeps your `application logic` completely decoupled from the `security layer`.
 
 ### Create Encryption Helper Functions
@@ -519,7 +523,7 @@ Create a file `./db/encryptionUtil.ts` and add the following codes.
 import { randomBytes, createCipheriv, createDecipheriv } from "crypto";
 
 // Ensure you have a 32-byte (256-bit) key in your environment variables
-const ENCRYPTION_KEY = Buffer.from(process.env.DB_ENCRYPTION_KEY || "", "hex"); 
+const ENCRYPTION_KEY = Buffer.from(process.env.DB_ENCRYPTION_KEY || "", "hex");
 const IV_LENGTH = 12; // Standard for GCM
 const TAG_LENGTH = 16;
 
@@ -527,12 +531,12 @@ const TAG_LENGTH = 16;
 export function encrypt(text: string): string {
   const iv = randomBytes(IV_LENGTH);
   const cipher = createCipheriv("aes-256-gcm", ENCRYPTION_KEY, iv);
-  
+
   let encrypted = cipher.update(text, "utf8", "hex");
   encrypted += cipher.final("hex");
-  
+
   const authTag = cipher.getAuthTag().toString("hex");
-  
+
   // Format: iv:authTag:encryptedData
   return `${iv.toString("hex")}:${authTag}:${encrypted}`;
 }
@@ -551,7 +555,7 @@ export function decrypt(encryptedText: string): string {
 
   let decrypted = decipher.update(encryptedData, "hex", "utf8");
   decrypted += decipher.final("utf8");
-  
+
   return decrypted;
 }
 ```
@@ -605,9 +609,9 @@ import { encryptedText } from "./encryptionUtil.ts";
 
 export const todoTable = pgTable("todo", {
   ...
-	
+
   // encrypts & decrypts todoText
-  todoText: encryptedText("todo_text").notNull(),	
+  todoText: encryptedText("todo_text").notNull(),
 
 	...
 });
@@ -620,7 +624,7 @@ export const taskTable = pgTable('tasks', {
   ...
   // encrypt & decrypts taskText
   taskText: encryptedText('task_text').notNull(),
-  
+
 	...
 });
 ```
@@ -628,12 +632,12 @@ export const taskTable = pgTable('tasks', {
 #### Trade-offs
 
 - **No Database-Level Indexing/Querying**: Because data is randomized by initialization vectors (IVs) prior to saving, `encryptedText` cannot be safely queried using precise matches (`eq`) or pattern matches (`like`) via plain SQL.
-- **Filtering Requirements**: If you must query or filter by an encrypted field, you must pull the records into application memory first. 
+- **Filtering Requirements**: If you must query or filter by an encrypted field, you must pull the records into application memory first.
   - Or use a specialized cryptographic platform extension like `CipherStash` with `Drizzle` to preserve query features.
 
 ### Test with API
 
-Now we can test the **application-side column encyption** by creating new `todo` items and `task` items. 
+Now we can test the **application-side column encyption** by creating new `todo` items and `task` items.
 
 After that, use a database client (e.g. `DBeaver`) to view data stored in the database. We shoud see that the data in the `todoText` and `taskText` are now encrypted.
 
@@ -647,11 +651,11 @@ We will add an `encryptedJsonb` customType at the end of the file `./db/encrypti
 
 ```typescript
 // Create the Custom Encrypted JSONB Type
-export const encryptedJsonb = <TData>(name: string) => 
+export const encryptedJsonb = <TData>(name: string) =>
   customType<{ data: TData; driverData: string }>({
     dataType() {
       // Maps to a text column in Postgres to hold the encrypted string token safely
-      return 'text'; 
+      return "text";
     },
     toDriver(value: TData): string {
       // Serialize the TypeScript object to a JSON string and encrypt it
@@ -683,6 +687,6 @@ export const userTable = pgTable("users", {
 
 ### Test Jsonb encryption with API
 
-Now we can test the **jsonb encyption** by creating a new `user` along with its `metadata` . 
+Now we can test the **jsonb encyption** by creating a new `user` along with its `metadata` .
 
-After that, use a database client (e.g. `DBeaver`) to view data stored in the database. We shoud see that the data of  `metadata` is now encrypted.
+After that, use a database client (e.g. `DBeaver`) to view data stored in the database. We shoud see that the data of `metadata` is now encrypted.
