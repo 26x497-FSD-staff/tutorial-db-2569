@@ -442,6 +442,26 @@ We can insert `metadata` as JSON object into the `userTable.metadata` column.
 }
 ```
 
+If you use **Insomnia**, use can also use `faker data generator` plugin inside JSON body like this.
+
+```json
+// JSON body with fake data generator
+
+{
+	"email": "{% faker 'randomEmail' %}",
+	"displayName": "{% faker 'randomUserName' %}",
+	"metadata": {
+		"name": "{% faker 'randomFullName' %}",
+		"role": "Leader",
+		"isActive": {% faker 'randomBoolean' %},
+		"address" : {
+			"city": "{% faker 'randomCity' %}",
+			"street": "{% faker 'randomStreetAddress' %}"
+		}
+	}
+}
+```
+
 We should get a response as shown below if it is successful.
 
 ```json
