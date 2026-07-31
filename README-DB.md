@@ -340,6 +340,8 @@ This operation should delete the specified `todo` item along with its `task` ite
 
 ## Using PostgreSQL to store NoSQL document
 
+![more tables](./img/db3.png)
+
 By default, `PostgreSQL` database can be used to store `JSON` data as `jsonb` column. We will create a table to store `User` data.
 
 1. Create a drizzle schema for the `userTable` in the file `./db/schema.ts` as followed.
