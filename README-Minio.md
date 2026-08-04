@@ -460,7 +460,7 @@ Note that we does not include the logic to remove all file records from `fileTab
 
 In this section, we will create API endpoints that store uploaded files in an **Object Data Store** service.
 
-![Minio - Object Storage](./img/minio.png)
+![Minio - Object Storage](./img/minio2.png)
 
 ### 1. Install `minio` package
 
