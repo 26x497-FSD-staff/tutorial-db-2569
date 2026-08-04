@@ -1,4 +1,4 @@
-# Database Tutorial
+# Database Design Tutorial
 
 This is a `Database Tutorial` guideline for the `Database design` module.
 We will continue from the [pf-backend](https://github.com/fullstack-69/pf-backend.git) project.
