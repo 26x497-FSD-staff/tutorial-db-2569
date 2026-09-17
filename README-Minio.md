@@ -235,6 +235,10 @@ After this our API will provide `/file/...` endpoints.
 Insert the following code in the file `./src/routes/fileRouter_v1.ts`. This endpoint will be used to handle a file uploading operation.
 
 ```typescript
+// import Database client
+import { dbClient } from "@db/client.js";
+import { fileTable } from "@db/schema.js";
+
 // POST /file/upload - Endpoint to handle file upload
 router.post(
   "/upload",
