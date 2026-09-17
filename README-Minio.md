@@ -674,6 +674,7 @@ import path from "path";
 
 import { dbClient } from "@db/client.js";
 import { fileTable } from "@db/schema.js";
+import { eq } from "drizzle-orm";
 
 import dotenv from "dotenv";
 dotenv.config();
@@ -963,6 +964,8 @@ router.delete(
 
       // Delete the object from the MinIO bucket
       await minioClient.removeObject(BUCKET_NAME, fullStoragePath);
+
+      await dbClient.delete(fileTable).where(eq(fileTable.filename, fullStoragePath));
 
       // Return successful response
       res.status(200).json({
