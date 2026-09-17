@@ -602,8 +602,8 @@ User: minioadmin
 Finally, we must create a bucket, `todo-bucket`, under our `localminio` alias with the following command.
 
 ```bash
-sh-5.1# mc mb localminio/todo-app
-Bucket created successfully `localminio/todo-app`.
+sh-5.1# mc mb localminio/todo-bucket
+Bucket created successfully `localminio/todo-bucket`.
 ```
 
 Verify the new bucket with this command.
