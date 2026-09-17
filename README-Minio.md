@@ -238,6 +238,7 @@ Insert the following code in the file `./src/routes/fileRouter_v1.ts`. This endp
 // import Database client
 import { dbClient } from "@db/client.js";
 import { fileTable } from "@db/schema.js";
+import { eq } from "drizzle-orm";
 
 // POST /file/upload - Endpoint to handle file upload
 router.post(
