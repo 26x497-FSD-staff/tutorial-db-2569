@@ -379,8 +379,8 @@ This endpoint gets `:filename` to be deleted as parameterized URL.
 
 ```typescript
 // DELETE /file/:filename - Endpoint to delete a specific file by name
-router.delete("/", (req: Request, res: Response): void => {
-  const filename = req.query.filename as string;
+router.delete("/:filename", (req: Request, res: Response): void => {
+  const filename = req.params.filename as string;
 
   if (!filename) {
     res
@@ -399,11 +399,12 @@ router.delete("/", (req: Request, res: Response): void => {
     return;
   }
 
-  fs.unlink(filePath, (err) => {
+  fs.unlink(filePath, async (err) => {
     if (err) {
       res.status(500).json({ error: "Failed to delete file" });
       return;
     }
+    await dbClient.delete(fileTable).where(eq(fileTable.filename, filename));
     res
       .status(200)
       .json({ message: `File ${safeFilename} deleted successfully` });
